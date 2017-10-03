@@ -1,14 +1,17 @@
 ---
-title: "STAT/MATH 495: Problem Set 04"
-author: "WRITE YOUR NAME HERE"
-date: "2017-10-03"
+title: 'STAT/MATH 495: Problem Set 04'
+author: "Syed Abbas Shah"
+date: '2017-10-03'
 output:
   html_document:
-    toc: true
-    toc_float: true
+    collapsed: no
+    smooth_scroll: no
+    toc: yes
     toc_depth: 2
-    collapsed: false
-    smooth_scroll: false
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
 ---
 
 ```{r setup, include=FALSE}
@@ -18,22 +21,26 @@ set.seed(76)
 
 # Collaboration
 
-Please indicate who you collaborated with on this assignment:
-
+I didn't collaborate with anyone on this assignment. 
 
 # Load packages, data, model formulas
 
-```{r, warning=FALSE}
+```{r, message=FALSE, warning=FALSE, include=FALSE}
 library(tidyverse)
+library(broom)
+library(plotly)
+library(gridExtra)
 credit <- read_csv("http://www-bcf.usc.edu/~gareth/ISL/Credit.csv") %>%
   select(-X1) %>%
   mutate(ID = 1:n()) %>% 
   select(ID, Balance, Income, Limit, Rating, Age, Cards, Education)
 ```
 
-You will train the following 7 models on `credit_train`...
+I trained 7 models all designed to predict Credit. The models basically involve an increasing number of coefficients starting with the simplest (just the intercept) to model7, which has 6 predictors.
+I will first train all models on the train data (which has 20 observations) and apply it to the test data (which has 380). Then I will compute RMSE values for all models on both train and test, and compare them to discern and explain any trends.
 
-```{r}
+
+```{r, include=FALSE}
 model1_formula <- as.formula("Balance ~ 1")
 model2_formula <- as.formula("Balance ~ Income")
 model3_formula <- as.formula("Balance ~ Income + Limit")
@@ -41,11 +48,35 @@ model4_formula <- as.formula("Balance ~ Income + Limit + Rating")
 model5_formula <- as.formula("Balance ~ Income + Limit + Rating + Age")
 model6_formula <- as.formula("Balance ~ Income + Limit + Rating + Age + Cards")
 model7_formula <- as.formula("Balance ~ Income + Limit + Rating + Age + Cards + Education")
+formulae <- c(model1_formula,model2_formula, model3_formula, model4_formula, model5_formula, model6_formula, model7_formula)
 ```
 
-... where `credit_train` is defined below, along with `credit_test`.
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 
-```{r}
+#FUNCTION 1:
+#Making a function which will output the rmse from the fitted model
+rmsefn <- function(model){
+  resid<-augment(model) %>% 
+    select(.resid)
+  rmse <- resid ^2 %>% 
+    mean() %>% 
+    sqrt()
+  return(rmse)
+}
+#FUNCTION 2:
+#Making a function to store all the predictions from test model and compute an rmse value
+predfn <- function(model,dataset){
+predictions <- predict(model, dataset)  
+resid <- predictions - dataset$Balance
+rmse<- resid^2 %>% 
+  mean() %>% 
+  sqrt()
+  return(rmse)
+}
+```
+
+
+```{r, echo=FALSE}
 set.seed(79)
 credit_train <- credit %>% 
   sample_n(20)
@@ -56,16 +87,42 @@ credit_test <- credit %>%
 
 # RMSE vs number of coefficients
 
-```{r, echo=TRUE, warning=FALSE, message=FALSE}
-# Placeholder vectors of length 7. For now, I've filled them with arbitrary 
-# values; you will fill these in
-RMSE_train <- runif(n=7)
-RMSE_test <- runif(n=7)
+First, let's fit all 7 models on the training dataset. 
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+model1 <- lm(model1_formula, data=credit_train)
+rmsetrain1 <- rmsefn(model1)
+rmsetest1<- predfn(model1, credit_test)
+
+model2 <- lm(model2_formula, 
+             data=credit_train)
+rmsetrain2 <- rmsefn(model2)
+rmsetest2<- predfn(model2,credit_test)
+
+model3 <- lm(model3_formula, data=credit_train)
+rmsetrain3 <- rmsefn(model3)
+rmsetest3<- predfn(model3,credit_test)
+
+model4 <- lm(model4_formula, data=credit_train)
+rmsetrain4 <- rmsefn(model4)
+rmsetest4<- predfn(model4,credit_test)
+
+model5 <- lm(model5_formula, data=credit_train)
+rmsetrain5 <- rmsefn(model5)
+rmsetest5<- predfn(model5,credit_test)
+
+model6 <- lm(model6_formula, data=credit_train)
+rmsetrain6 <- rmsefn(model6)
+rmsetest6<- predfn(model6,credit_test)
+
+model7 <- lm(model7_formula, data=credit_train)
+rmsetrain7 <- rmsefn(model7)
+rmsetest7<- predfn(model7,credit_test)
 
 
-# Do your work here:
 
-
+RMSE_train <- c(rmsetrain1,rmsetrain2,rmsetrain3,rmsetrain4,rmsetrain5,rmsetrain6,rmsetrain7)
+RMSE_test <- c(rmsetest1,rmsetest2,rmsetest3,rmsetest4,rmsetest5,rmsetest6,rmsetest7)
 # Save results in a data frame. Note this data frame is in wide format.
 results <- data_frame(
   num_coefficients = 1:7,
@@ -84,16 +141,35 @@ results <- results %>%
   # can ggplot it
   gather(type, RMSE, -num_coefficients)
 
-ggplot(results, aes(x=num_coefficients, y=RMSE, col=type)) +
+results2 <- data_frame(
+  num_coefficients = 1:7,
+  diff= RMSE_test-RMSE_train
+) 
+x<-ggplot(results, aes(x=num_coefficients, y=RMSE, col=type)) +
   geom_line() + 
-  labs(x="# of coefficients", y="RMSE", col="Data used to evaluate \nperformance of fitted model")
+  labs(x="# of coefficients", y="RMSE", col="Data used to evaluate \nperformance of fitted model") + geom_point( )
+ggplotly(x)
+
+ggplot(data = results2, aes(x=num_coefficients, y=diff)) + geom_point()  + theme(legend.position="none") + labs(title="Difference in Training and Test RMSE over number of coefficients", x="Number of Coefficients", y="Difference between RMSE (Test - Train)") +geom_line()
+
 ```
+
+
 
 
 # Interpret the graph
 
 Compare and contrast the two curves and hypothesize as to the root cause of any differences.
 
+We can see a number of trends here:
+
+1) The RMSE values for very simple models (with just the intercept or with just one predictor) are very high. This is because the model is underfitted and consequently doesn't capture the signal very well.
+
+2) The RMSE values for both training and test data jump suddenly when two or three predictors are used. This is because the fitted planes capture a lot of the signal in both these models without overfitting.
+
+3) Beyond that, however, we see that the RMSE value for the test data shoots upwards again, while the value for the training RMSE keeps decreasing. This is because, by this point, we are overfitting the model: we are mistaking error for signal by assessing the random variation in the training data as being a function of the true, underlying function. In the case of multiple regression, this overfitting issue is particularly problematic with a high predictor-to-number of observations ratio, as that may create mathematical complications in terms of finding unique solutions to the equations. This will lower the out-of-sample predictive validity as it is more attuned to the specificities of the training dataset (often mistaking error for signal).
+
+To understand this conceptually, we should ground this in terms of the bias-variance tradeoff. We are increasing variance and lowering our bias as our model becomes overfit. Our expected test MSE depends on three factors, which include the aforementioned two of bias and variance. It happens that bias is inversely related to variance, and so we must find the right balance or 'tradeoff'.
 
 
 # Bonus
@@ -102,6 +178,81 @@ Repeat the whole process, but let `credit_train` be a random sample of size 380
 from `credit` instead of 20. Now compare and contrast this graph with the
 one above and hypothesize as to the root cause of any differences.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+set.seed(149)
+credit_train <- credit %>% 
+  sample_n(380)
+credit_test <- credit %>% 
+  anti_join(credit_train, by="ID")
+```
+
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+model1 <- lm(model1_formula, data=credit_train)
+rmsetrain1 <- rmsefn(model1)
+rmsetest1<- predfn(model1, credit_test)
+
+model2 <- lm(model2_formula, data=credit_train)
+rmsetrain2 <- rmsefn(model2)
+rmsetest2<- predfn(model2,credit_test)
+
+model3 <- lm(model3_formula, data=credit_train)
+rmsetrain3 <- rmsefn(model3)
+rmsetest3<- predfn(model3,credit_test)
+
+model4 <- lm(model4_formula, data=credit_train)
+rmsetrain4 <- rmsefn(model4)
+rmsetest4<- predfn(model4,credit_test)
+
+model5 <- lm(model5_formula, data=credit_train)
+rmsetrain5 <- rmsefn(model5)
+rmsetest5<- predfn(model5,credit_test)
+
+model6 <- lm(model6_formula, data=credit_train)
+rmsetrain6 <- rmsefn(model6)
+rmsetest6<- predfn(model6,credit_test)
+
+model7 <- lm(model7_formula, data=credit_train)
+rmsetrain7 <- rmsefn(model7)
+rmsetest7<- predfn(model7,credit_test)
+
+
+RMSE_train <- c(rmsetrain1,rmsetrain2,rmsetrain3,rmsetrain4,rmsetrain5,rmsetrain6,rmsetrain7)
+RMSE_test <- c(rmsetest1,rmsetest2,rmsetest3,rmsetest4,rmsetest5,rmsetest6,rmsetest7)
+# Save results in a data frame. Note this data frame is in wide format.
+
+results <- data_frame(
+  num_coefficients = 1:7,
+  RMSE_train,
+  RMSE_test
+) 
+
+
+results2 <- data_frame(
+  num_coefficients = 1:7,
+  diff= RMSE_test-RMSE_train
+) 
+# Some cleaning of results
+results <- results %>% 
+  # More intuitive names:
+  rename(
+    `Training data` = RMSE_train,
+    `Test data` = RMSE_test
+  ) %>% 
+  # Convert results data frame to "tidy" data format i.e. long format, so that we
+  # can ggplot it
+  gather(type, RMSE, -num_coefficients)
+
+o<-ggplot(results, aes(x=num_coefficients, y=RMSE, col=type)) +
+  geom_line() + 
+  labs(x="# of coefficients", y="RMSE", col="Data used to evaluate \nperformance of fitted model") + geom_point() 
+
+
+ggplotly(o)
+
+ggplot(data = results2, aes(x=num_coefficients, y=diff)) + geom_point()  + theme(legend.position="none") + labs(title="Difference in Training and Test RMSE over number of coefficients", x="Number of Coefficients", y="Difference between RMSE (Test - Train)") +geom_line()
 
 ```
+
+In this case, we see a similar initial pattern where the RMSE scores drop dramatically when we fit a plane with two or three predictors. Since the training data has many more observations, it seems reasonable that, on average, unexplained variation in it is larger than in a much smaller test data. The two lines, thus, are much closer, with the test data RMSE line being much more fickle and 'jumpy' than in the previous scenario. That said, we still see a positive slope as the number of coefficients move past an optimal value, indicating that we are overfitting our training set.
