@@ -36,8 +36,7 @@ credit <- read_csv("http://www-bcf.usc.edu/~gareth/ISL/Credit.csv") %>%
   select(ID, Balance, Income, Limit, Rating, Age, Cards, Education)
 ```
 
-I trained 7 models all designed to predict Credit. The models basically involve an increasing number of coefficients starting with the simplest (just the intercept) to model7, which has 6 predictors.
-I will first train all models on the train data (which has 20 observations) and apply it to the test data (which has 380). Then I will compute RMSE values for all models on both train and test, and compare them to discern and explain any trends.
+I trained 7 models all designed to predict Credit. The models basically involve an increasing number of coefficients starting with the simplest (just the intercept) to model7, which has 6 predictors. I will first train all models on the train data (which has 20 observations) and apply it to the test data (which has 380). Then I will compute RMSE values for all models on both train and test, and compare them to discern and explain any trends.
 
 
 ```{r, include=FALSE}
@@ -87,7 +86,7 @@ credit_test <- credit %>%
 
 # RMSE vs number of coefficients
 
-First, let's fit all 7 models on the training dataset. 
+First, let's fit all 7 models on the training dataset.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 model1 <- lm(model1_formula, data=credit_train)
@@ -165,11 +164,11 @@ We can see a number of trends here:
 
 1) The RMSE values for very simple models (with just the intercept or with just one predictor) are very high. This is because the model is underfitted and consequently doesn't capture the signal very well.
 
-2) The RMSE values for both training and test data jump suddenly when two or three predictors are used. This is because the fitted planes capture a lot of the signal in both these models without overfitting.
+2) The RMSE values for both training and test data drop suddenly and sharply when two or three predictors are used. This is because the fitted planes capture a lot of the signal in both these models without overfitting.
 
 3) Beyond that, however, we see that the RMSE value for the test data shoots upwards again, while the value for the training RMSE keeps decreasing. This is because, by this point, we are overfitting the model: we are mistaking error for signal by assessing the random variation in the training data as being a function of the true, underlying function. In the case of multiple regression, this overfitting issue is particularly problematic with a high predictor-to-number of observations ratio, as that may create mathematical complications in terms of finding unique solutions to the equations. This will lower the out-of-sample predictive validity as it is more attuned to the specificities of the training dataset (often mistaking error for signal).
 
-To understand this conceptually, we should ground this in terms of the bias-variance tradeoff. We are increasing variance and lowering our bias as our model becomes overfit. Our expected test MSE depends on three factors, which include the aforementioned two of bias and variance. It happens that bias is inversely related to variance, and so we must find the right balance or 'tradeoff'.
+4) To understand this conceptually, we should ground this in terms of the bias-variance tradeoff. We are increasing variance and lowering our bias as our model becomes overfit. Our expected test MSE depends on three factors, which include the aforementioned two of bias and variance. It happens that bias is inversely related to variance, and so we must find the right balance or 'tradeoff'. When the model is overfit, the variance increases, as we start to get too attuned to the idiosyncracies of the trianing dataset. 
 
 
 # Bonus
@@ -255,4 +254,6 @@ ggplot(data = results2, aes(x=num_coefficients, y=diff)) + geom_point()  + theme
 
 ```
 
-In this case, we see a similar initial pattern where the RMSE scores drop dramatically when we fit a plane with two or three predictors. Since the training data has many more observations, it seems reasonable that, on average, unexplained variation in it is larger than in a much smaller test data. The two lines, thus, are much closer, with the test data RMSE line being much more fickle and 'jumpy' than in the previous scenario. That said, we still see a positive slope as the number of coefficients move past an optimal value, indicating that we are overfitting our training set.
+In this case, we see a similar initial pattern where the RMSE scores drop dramatically when we fit a plane with two or three predictors.The two lines (train and test RMSE), are much closer, with the test data RMSE line being much less fickle and 'jumpy' than in the previous scenario. That said, we still see an upward movement for the test RMSE as the number of coefficients move past an optimal value, indicating that we are, eventually, overfitting our training set.
+
+The differences seen between this and the previous case could be explained by the fact that a model fit on a larger training dataset, in most cases, does a better job than one fit on a smaller training set, as more observations are present to estimate the parameters. This model will then make better predictions on test datasets, and the divergence between the two RMSE curves will be less pronounced than in the previous case.
